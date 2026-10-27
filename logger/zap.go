@@ -1,36 +1,87 @@
 package logger
 
 import (
+	"fmt"
 	"time"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type zapLogger struct {
 	log *zap.Logger
 }
 
-func New() Logger {
-	logger, err := NewWithConfig(Config{})
-	if err != nil {
-		panic(err)
-	}
-	return logger
-}
-
-func NewWithConfig(config Config) (Logger, error) {
+func New(config Config) (Logger, error) {
 	outputPaths, err := config.outputPaths()
 	if err != nil {
 		return nil, err
 	}
 
-	zapConfig := zap.NewDevelopmentConfig()
-	zapConfig.OutputPaths = outputPaths
+	level, err := config.Level.zapLevel()
+	if err != nil {
+		return nil, err
+	}
+	encoding, err := config.Encoding.zapEncoding()
+	if err != nil {
+		return nil, err
+	}
+
+	zapConfig := zap.Config{
+		Level:             zap.NewAtomicLevelAt(level),
+		Development:       config.Development,
+		DisableCaller:     !config.AddCaller,
+		DisableStacktrace: config.DisableStacktrace,
+		Encoding:          encoding,
+		EncoderConfig: zapcore.EncoderConfig{
+			TimeKey:        "ts",
+			LevelKey:       "level",
+			NameKey:        "logger",
+			CallerKey:      "caller",
+			FunctionKey:    zapcore.OmitKey,
+			MessageKey:     "msg",
+			StacktraceKey:  "stacktrace",
+			LineEnding:     zapcore.DefaultLineEnding,
+			EncodeLevel:    zapcore.LowercaseLevelEncoder,
+			EncodeTime:     zapcore.ISO8601TimeEncoder,
+			EncodeDuration: zapcore.StringDurationEncoder,
+			EncodeCaller:   zapcore.ShortCallerEncoder,
+			EncodeName:     zapcore.FullNameEncoder,
+		},
+		OutputPaths:      outputPaths,
+		ErrorOutputPaths: []string{"stderr"},
+	}
 	log, err := zapConfig.Build()
 	if err != nil {
 		return nil, err
 	}
 	return &zapLogger{log: log}, nil
+}
+
+func (level Level) zapLevel() (zapcore.Level, error) {
+	switch level {
+	case LevelInfo:
+		return zapcore.InfoLevel, nil
+	case LevelDebug:
+		return zapcore.DebugLevel, nil
+	case LevelWarn:
+		return zapcore.WarnLevel, nil
+	case LevelError:
+		return zapcore.ErrorLevel, nil
+	default:
+		return 0, fmt.Errorf("logger: unsupported level %d", level)
+	}
+}
+
+func (encoding Encoding) zapEncoding() (string, error) {
+	switch encoding {
+	case EncodingJSON:
+		return "json", nil
+	case EncodingConsole:
+		return "console", nil
+	default:
+		return "", fmt.Errorf("logger: unsupported encoding %d", encoding)
+	}
 }
 
 func (l *zapLogger) Debug(msg string, fields ...Field) {

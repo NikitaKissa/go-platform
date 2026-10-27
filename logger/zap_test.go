@@ -11,9 +11,9 @@ var _ Logger = (*zapLogger)(nil)
 
 func TestZapLoggerMethodsWriteMessagesAndFields(t *testing.T) {
 	filePath := filepath.Join(t.TempDir(), "logger.log")
-	logger, err := NewWithConfig(Config{Output: OutputFile, FilePath: filePath})
+	logger, err := New(testConfig(OutputFile, filePath))
 	if err != nil {
-		t.Fatalf("NewWithConfig() error = %v", err)
+		t.Fatalf("New() error = %v", err)
 	}
 
 	if got := logger.Named("component").(*zapLogger).log.Name(); got != "component" {
@@ -41,21 +41,14 @@ func TestZapLoggerMethodsWriteMessagesAndFields(t *testing.T) {
 		"info message",
 		"warn message",
 		"error message",
-		`"scope": "test"`,
-		`"level_field": "debug"`,
-		`"level_field": 1`,
-		`"level_field": true`,
-		`"error": "file does not exist"`,
+		`"scope":"test"`,
+		`"level_field":"debug"`,
+		`"level_field":1`,
+		`"level_field":true`,
+		`"error":"file does not exist"`,
 	} {
 		if !strings.Contains(logOutput, expected) {
 			t.Errorf("log output does not contain %q:\n%s", expected, logOutput)
 		}
-	}
-}
-
-func TestNewReturnsLogger(t *testing.T) {
-	logger := New()
-	if logger == nil {
-		t.Fatal("New() returned nil")
 	}
 }

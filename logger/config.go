@@ -1,6 +1,8 @@
 package logger
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type OutputMode uint8
 
@@ -10,9 +12,30 @@ const (
 	OutputFileAndStdout
 )
 
+type Level uint8
+
+const (
+	LevelInfo Level = iota
+	LevelDebug
+	LevelWarn
+	LevelError
+)
+
+type Encoding uint8
+
+const (
+	EncodingJSON Encoding = iota
+	EncodingConsole
+)
+
 type Config struct {
-	Output   OutputMode
-	FilePath string
+	Output            OutputMode
+	FilePath          string
+	Level             Level
+	Encoding          Encoding
+	Development       bool
+	AddCaller         bool
+	DisableStacktrace bool
 }
 
 func (config Config) outputPaths() ([]string, error) {
